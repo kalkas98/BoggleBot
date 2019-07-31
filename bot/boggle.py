@@ -1,12 +1,11 @@
 import random
-
+import trie
 CUBE_SIDES = 6
 MIN_WORD_LENGTH = 3
 DICTIONARY_FILE = "words.txt"
 BOARD_SIZE = 4
 
-# possible letters at every cube, used to generate a board which is
-# not completely random where words are easier to form
+# possible letters at every cube, used to generate a board where words are easier to form
 CUBES = [
    "AAEEGN", "ABBJOO", "ACHOPS", "AFFKPS",
    "AOOTTW", "CIMOTU", "DEILRX", "DELRVY",
@@ -23,13 +22,12 @@ class Boggle:
     def __init__(self):
 
         self.word_list = set(line.strip() for line in open(DICTIONARY_FILE))
-
+        self.root = self.init_trie()
         self.points_list = {}
         self.visited = [[], [], [], []]
         self.board = [[], [], [], []]
         self.guessed = []
         self.init_board()
-        # Reset Game()
 
     def reset_game(self):
         """Resets the game state"""
@@ -38,6 +36,15 @@ class Boggle:
         self.visited = [[], [], [], []]
         self.board = [[], [], [], []]
         self.init_board()
+
+    def init_trie(self):
+        """"Adds all words from the dictionary to a trie structure and returns the root"""
+        file = open(DICTIONARY_FILE)
+        root = trie.Node("")
+        for line in file:
+            trie.add(root,line.strip().lower())
+        file.close()
+        return root
 
     def init_board(self):
         """Initializes the letters at the board and initializes self.visited"""
@@ -93,18 +100,9 @@ class Boggle:
 
         return words
 
-    def get_remaining_words_string(self):
-        """Returns all remaining words as a string"""
-        words = self.get_remaining_words()
-        word_string = ""
-        for word in words:
-            word_string += word + " "
-        return word_string
-
     def get_remaining_words_helper(self, row, column, word, words):
         """
         Recursive helper function for determining all possible words that can be found on the board
-        this function is pretty slow and should probably make use of a trie data structure
         :param row: row att which the previous letter was found
         :param column: column at which the previous letter was found
         :param word: word which the function is looking to form on the board
@@ -121,16 +119,20 @@ class Boggle:
                 in_bounds = (i > -1) and (n > -1) and (i < BOARD_SIZE) and (n < BOARD_SIZE)
 
                 if in_bounds and not self.visited[i][n] and self.word_starts_with(word + self.board[i][n]):
-                    #print(word+self._board[i][n])
                     self.get_remaining_words_helper(i, n, word + self.board[i][n], words)
         self.visited[row][column] = False
 
+    def get_remaining_words_string(self):
+        """Returns all remaining words as a string"""
+        words = self.get_remaining_words()
+        word_string = ""
+        for word in words:
+            word_string += word + " "
+        return word_string
+
     def word_starts_with(self, word):
         """Returns true if there exists an english word that starts with the given word"""
-        for real_word in self.word_list:
-            if len(real_word)>3 and real_word.lower().startswith(word.lower()):
-                return True
-        return False
+        return trie.find(self.root, word.lower())
 
     def is_valid(self, word):
         """
@@ -181,11 +183,11 @@ class Boggle:
             scores += player + " : " + str(score) + "\n"
         return scores
 
-    def get_chat_board(boggle):
+    def get_chat_board(self):
         """Returns a discord chat representation of the given boggle game"""
         board = ""
         for i in range(0, BOARD_SIZE):
             for n in range(0, BOARD_SIZE):
-                board += ":regional_indicator_"+boggle.board[i][n].lower()+": "
+                board += ":regional_indicator_"+self.board[i][n].lower()+": "
             board += "\n"
         return board
